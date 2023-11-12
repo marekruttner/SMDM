@@ -41,8 +41,8 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Instagram Clone',
-        theme: ThemeData.dark().copyWith(
+        title: 'SMDM - Data Collectro',
+        theme: ThemeData.light().copyWith(
           scaffoldBackgroundColor: mobileBackgroundColor,
         ),
         home: StreamBuilder(
@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
               }
             }
 
-            // means connection to future hasnt been made yet
+            // means connection to future hasn't been made yet
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                 child: CircularProgressIndicator(),
