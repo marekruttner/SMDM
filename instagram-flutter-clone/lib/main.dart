@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'SMDM - Data Collectro',
-        theme: ThemeData.light().copyWith(
+        theme: ThemeData.dark().copyWith(
           scaffoldBackgroundColor: mobileBackgroundColor,
         ),
         home: StreamBuilder(
