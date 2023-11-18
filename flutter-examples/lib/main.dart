@@ -58,7 +58,9 @@ class AppState {
   }
 
   void _writeToFile() {
-    final csvContent = coordinates.map((coord) => '${coord.x},${coord.y}\n').join();
+    final csvContent = coordinates
+        .map((coord) => '${coord.x},${coord.y},${coord.timestamp.toIso8601String()}\n')
+        .join();
     _file.writeAsStringSync(csvContent);
   }
 
@@ -74,10 +76,15 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (details) {
-        // Get the coordinates of the tap
+        // Get the coordinates of the tap and the timestamp
         final RenderBox renderBox = context.findRenderObject() as RenderBox;
         final coordinates = renderBox.globalToLocal(details.globalPosition);
-        appState.recordClick(Coordinate(x: coordinates.dx, y: coordinates.dy));
+        final timestamp = DateTime.now();
+        appState.recordClick(Coordinate(
+          x: coordinates.dx,
+          y: coordinates.dy,
+          timestamp: timestamp,
+        ));
       },
       child: Scaffold(
         appBar: AppBar(
@@ -92,7 +99,8 @@ class MyHomePage extends StatelessWidget {
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Coordinates: $coordinates'),
+                    for (var coord in coordinates)
+                      Text('Coordinates: ${coord.x}, ${coord.y}, ${coord.timestamp}'),
                   ],
                 );
               } else {
@@ -109,11 +117,16 @@ class MyHomePage extends StatelessWidget {
 class Coordinate {
   final double x;
   final double y;
+  final DateTime timestamp;
 
-  Coordinate({required this.x, required this.y});
+  Coordinate({
+    required this.x,
+    required this.y,
+    required this.timestamp,
+  });
 
   @override
   String toString() {
-    return '($x, $y)';
+    return '($x, $y, $timestamp)';
   }
 }
