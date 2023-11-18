@@ -29,11 +29,11 @@ class MyApp extends StatelessWidget {
 
 class AppState {
   List<Coordinate> coordinates = [];
-  late StreamController<List<Coordinate>> _controller;
+  late StreamController<Coordinate> _controller;
   late File _file;
 
   AppState() {
-    _controller = StreamController<List<Coordinate>>.broadcast();
+    _controller = StreamController<Coordinate>.broadcast();
     _file = File('click_coordinates.csv');
   }
 
@@ -44,7 +44,9 @@ class AppState {
   }
 
   void _continuousFunction() {
-    _controller.add(coordinates);
+    if (coordinates.isNotEmpty) {
+      _controller.add(coordinates.last);
+    }
 
     // Schedule the function to run again after the next frame
     WidgetsBinding.instance?.addPostFrameCallback((_) {
@@ -64,7 +66,7 @@ class AppState {
     _file.writeAsStringSync(csvContent);
   }
 
-  Stream<List<Coordinate>> get coordinateStream => _controller.stream;
+  Stream<Coordinate> get coordinateStream => _controller.stream;
 }
 
 class MyHomePage extends StatelessWidget {
@@ -91,17 +93,14 @@ class MyHomePage extends StatelessWidget {
           title: const Text('Click Tracker'),
         ),
         body: Center(
-          child: StreamBuilder<List<Coordinate>>(
+          child: StreamBuilder<Coordinate>(
             stream: appState.coordinateStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                final coordinates = snapshot.data!;
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var coord in coordinates)
-                      Text('Coordinates: ${coord.x}, ${coord.y}, ${coord.timestamp}'),
-                  ],
+                final coordinate = snapshot.data!;
+                return Text(
+                  'Last Coordinates: ${coordinate.x}, ${coordinate.y}, ${coordinate.timestamp}',
+                  style: TextStyle(fontSize: 18),
                 );
               } else {
                 return const CircularProgressIndicator();

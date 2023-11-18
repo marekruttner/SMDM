@@ -17,15 +17,17 @@ void main() async {
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: "AIzaSyCMbvWXGuJohjd2mPwWtCk80tzzspZcONo",
-        appId: "1:239282494705:web:01aa4ba0125dee7c869d50",
-        messagingSenderId: "239282494705",
-        projectId: "i-proj-b2c5f",
-        storageBucket: 'i-proj-b2c5f.appspot.com'
+        apiKey: "AIzaSyBY8wvWPR9dwKeC3GCO3ypJ2fTp7njlLck",
+        appId: "1:1092440467802:web:0bf5dc38f52e6cbd28eb63",
+        messagingSenderId: "1092440467802",
+        projectId: "smdm1-60263",
+        storageBucket: "smdm1-60263.appspot.com"
       ),
     );
+    runApp(const MyApp());
   } else {
     await Firebase.initializeApp();
+    //runApp(const MyApp());
   }
   runApp(const MyApp());
 }
