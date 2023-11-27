@@ -33,17 +33,29 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
   }
 
   void navigationTapped(int page) {
-    //Animating Page
+    // Animating Page
     pageController.jumpToPage(page);
+  }
+
+  void onTapDown(TapDownDetails details) {
+    // Get the coordinates of the tap
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final coordinates = renderBox.globalToLocal(details.globalPosition);
+
+    // Log the coordinates or perform any other action
+    print('Tap Coordinates: ${coordinates.dx}, ${coordinates.dy}');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: pageController,
-        onPageChanged: onPageChanged,
-        children: homeScreenItems,
+      body: GestureDetector(
+        onTapDown: onTapDown,
+        child: PageView(
+          controller: pageController,
+          onPageChanged: onPageChanged,
+          children: homeScreenItems,
+        ),
       ),
       bottomNavigationBar: CupertinoTabBar(
         backgroundColor: mobileBackgroundColor,
