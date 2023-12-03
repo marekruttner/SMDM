@@ -1,7 +1,17 @@
+import 'dart:html';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:instagram_clone_flutter/utils/colors.dart';
 import 'package:instagram_clone_flutter/utils/global_variable.dart';
+
+import '../models/post.dart';
+
+import 'dart:io';
+import 'package:csv/csv.dart';
+import 'package:file/file.dart';
+
+import 'dart:html' as html;
 
 class MobileScreenLayout extends StatefulWidget {
   const MobileScreenLayout({Key? key}) : super(key: key);
@@ -12,7 +22,9 @@ class MobileScreenLayout extends StatefulWidget {
 
 class _MobileScreenLayoutState extends State<MobileScreenLayout> {
   int _page = 0;
-  late PageController pageController; // for tabs animation
+  late PageController pageController;
+
+  List<Post> get posts => []; // for tabs animation
 
   @override
   void initState() {
@@ -41,10 +53,43 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
     // Get the coordinates of the tap
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final coordinates = renderBox.globalToLocal(details.globalPosition);
+    final postHeight = MediaQuery.of(context).size.height * 0.7;
+    final index = (coordinates.dy / postHeight).floor();
 
-    // Log the coordinates or perform any other action
-    print('Tap Coordinates: ${coordinates.dx}, ${coordinates.dy}');
+    // Print tap coordinates
+    print('Tap Coordinates: ${coordinates.dx}, ${coordinates.dy} index of post: $index');
+
+    // Get the UID of the post associated with the tapped area
+    //String postUid = getPostUidForCoordinates(coordinates, posts);
+
+    // Log the post UID
+    //print('Post UID: $postUid');
+
   }
+
+
+
+
+  Object getPostUidForCoordinates(Offset coordinates, List<Post> posts) {
+    // Assuming each post has a fixed height, calculate the index of the tapped post
+    final postHeight = MediaQuery.of(context).size.height * 0.7;
+    final index = (coordinates.dy / postHeight).floor();
+
+    // Print for debugging
+    print('Tap Coordinates: ${coordinates.dy}');
+    print('Post Height: $postHeight');
+    print('Calculated Index: $index');
+
+    // Check if the index is valid
+    if (index >= 0 && index < posts.length) {
+      // Access the 'postId' field directly from the post
+      return posts[index].postId;
+    } else {
+      return 'NO POST'; // No post found for the given coordinates
+    }
+    return index;
+  }
+
 
   @override
   Widget build(BuildContext context) {
