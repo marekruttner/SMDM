@@ -399,7 +399,7 @@ It may be due to the following:
                 added_tweets = 0
 
                 for card in self.tweet_cards[-15:]:
-                    try:5
+                    try:
                         tweet_id = str(card)
 
                         if tweet_id not in self.tweet_ids:
