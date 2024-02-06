@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
 # Load the trained model
-model = tf.keras.models.load_model('./model/test1000_model')
+model = tf.keras.models.load_model('./model/test1000_model_updated')
 
 # Assuming there's a need to reverse the scaling for predictions
 # This will depend on how you've applied scaling during training
