@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from transformers import BertTokenizer, BertModel
 import numpy as np
 
-
+"""
 class GaussianMixtureLayer(nn.Module):
     def __init__(self, input_dim, num_components):
         super(GaussianMixtureLayer, self).__init__()
@@ -56,9 +56,19 @@ def predict(text, model, tokenizer):
 
     with torch.no_grad():
         pdf = model(input_ids=input_ids, attention_mask=attention_mask)
-    predicted_value = pdf.argmax().item()  # Simplified interpretation for demonstration
-    return predicted_value
 
+    # Assuming we can access the means and weights of the Gaussian Mixture directly
+    # This part of the code might need to be adjusted based on the actual model architecture and output
+    means = model.output_layer.means.detach().cpu().numpy()
+    weights = torch.softmax(model.output_layer.weights, dim=0).detach().cpu().numpy()
+
+    # Calculate the weighted average of the means
+    weighted_average = np.dot(weights, means)
+
+    # For simplicity, let's take the mean of the weighted averages across all dimensions
+    predicted_value = np.mean(weighted_average)
+
+    return predicted_value
 
 # Load the tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -66,6 +76,43 @@ model_path = "enhanced_numerical_prediction_model.pth"  # Update this path as ne
 model = load_model(model_path)
 
 # Example prediction
-text = "Is everyone in love with you at the airport, or is it just that Valentine’s Day is coming up?"
+text = "What's next?"
+predicted_value = predict(text, model, tokenizer)
+print(f"Predicted value: {predicted_value}")
+
+"""
+class DirectNumericalPredictionModel(nn.Module):
+    def __init__(self):
+        super(DirectNumericalPredictionModel, self).__init__()
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        hidden_size = self.bert.config.hidden_size
+        self.regressor = nn.Linear(hidden_size, 1)  # Predict a single continuous value
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        sequence_output = outputs.pooler_output
+        predicted_value = self.regressor(sequence_output)
+        return predicted_value
+
+def predict(text, model, tokenizer):
+    inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True, padding="max_length",
+                       add_special_tokens=True)
+    input_ids = inputs['input_ids']
+    attention_mask = inputs['attention_mask']
+
+    with torch.no_grad():
+        predicted_value = model(input_ids=input_ids, attention_mask=attention_mask).squeeze().item()
+
+    return predicted_value
+
+
+# Example prediction usage
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model_path = "path_to_your_trained_model.pth"  # Ensure this path points to your trained model
+model = DirectNumericalPredictionModel()
+model.load_state_dict(torch.load(model_path))
+model.eval()
+
+text = "Example text input for prediction."
 predicted_value = predict(text, model, tokenizer)
 print(f"Predicted value: {predicted_value}")

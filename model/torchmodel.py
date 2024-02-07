@@ -61,7 +61,7 @@ class GaussianMixtureLayer(nn.Module):
         pdf = torch.sum(weighted_densities, dim=1)
 
         return pdf
-
+"""
 class EnhancedNumericalPredictionModel(nn.Module):
     def __init__(self, num_components=3):
         super(EnhancedNumericalPredictionModel, self).__init__()
@@ -75,6 +75,20 @@ class EnhancedNumericalPredictionModel(nn.Module):
         pdf = self.output_layer(sequence_output)
         return pdf
 
+"""
+class DirectNumericalPredictionModel(nn.Module):
+    def __init__(self):
+        super(DirectNumericalPredictionModel, self).__init__()
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        hidden_size = self.bert.config.hidden_size
+        self.regressor = nn.Linear(hidden_size, 1)  # Predict a single continuous value
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        sequence_output = outputs.pooler_output
+        predicted_value = self.regressor(sequence_output)
+        return predicted_value
+
 # Training Preparation
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 df = pd.read_csv('dataset/torchtest.csv')
@@ -83,6 +97,7 @@ numerical_values = df['number'].astype(float).tolist()
 dataset = NumericalPredictionDataset(sentences, numerical_values, tokenizer)
 dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
 # Initialize the model, optimizer, etc. as before
+"""
 model = EnhancedNumericalPredictionModel()
 model.train()
 
@@ -102,6 +117,29 @@ for epoch in range(epochs):
         total_loss += loss.item()
     avg_loss = total_loss / len(dataloader)
     loss_values.append(avg_loss)  # Store the average loss for this epoch
+    print(f"Epoch {epoch+1}, Loss: {avg_loss}")
+
+"""
+model = DirectNumericalPredictionModel()
+model.train()
+
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+loss_function = nn.MSELoss()
+
+epochs = 10  # Adjust epochs according to your need
+loss_values = []
+
+for epoch in range(epochs):
+    total_loss = 0
+    for input_ids, attention_mask, targets in dataloader:
+        optimizer.zero_grad()
+        predictions = model(input_ids=input_ids, attention_mask=attention_mask).squeeze()
+        loss = loss_function(predictions, targets)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    avg_loss = total_loss / len(dataloader)
+    loss_values.append(avg_loss)
     print(f"Epoch {epoch+1}, Loss: {avg_loss}")
 
 # Save the model's state dictionary
