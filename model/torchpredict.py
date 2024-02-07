@@ -1,10 +1,40 @@
+import pandas as pd
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizer, BertModel
 import numpy as np
+import matplotlib.pyplot as plt
+import torch.nn as nn
+import torch.nn.functional as F
 
-"""
+# Load dataset (Ensure 'torchtest.csv' with 'text' and 'number' columns is available)
+
+class NumericalPredictionDataset(Dataset):
+    def __init__(self, sentences, numerical_values, tokenizer):
+        self.sentences = sentences
+        self.numerical_values = numerical_values
+        self.tokenizer = tokenizer
+
+    def __len__(self):
+        return len(self.sentences)
+
+    def __getitem__(self, idx):
+        sentence = self.sentences[idx]
+        num_value = self.numerical_values[idx]
+
+        # Check if sentence is a string
+        if not isinstance(sentence, str):
+            print(f"Skipping idx {idx}, not a string: {sentence}")
+            sentence = ""  # Use an empty string or some placeholder text
+
+        inputs = self.tokenizer(sentence, return_tensors="pt", max_length=128, truncation=True, padding="max_length",
+                                add_special_tokens=True)
+        target = torch.tensor([num_value], dtype=torch.float)
+        input_ids = inputs['input_ids'].squeeze()
+        attention_mask = inputs['attention_mask'].squeeze()
+        return input_ids, attention_mask, target
+
+
 class GaussianMixtureLayer(nn.Module):
     def __init__(self, input_dim, num_components):
         super(GaussianMixtureLayer, self).__init__()
@@ -14,7 +44,10 @@ class GaussianMixtureLayer(nn.Module):
         self.weights = nn.Parameter(torch.zeros(num_components))  # Initial weights are equal
 
     def forward(self, x):
+        # Ensure positive weights that sum to 1
         weights = F.softmax(self.weights, dim=0)
+
+        # Compute Gaussian densities
         x_expand = x.unsqueeze(1).expand(-1, self.num_components, -1)
         means_expand = self.means.unsqueeze(0)
         std_devs = torch.exp(self.log_vars / 2)
@@ -22,11 +55,13 @@ class GaussianMixtureLayer(nn.Module):
         exponent = torch.sum(((x_expand - means_expand) / std_devs_expand) ** 2, dim=2)
         prefactor = torch.prod(std_devs_expand, dim=2) * (2 * np.pi) ** (std_devs_expand.size(2) / 2)
         densities = torch.exp(-0.5 * exponent) / prefactor
+
+        # Weighted sum of densities
         weighted_densities = densities * weights
         pdf = torch.sum(weighted_densities, dim=1)
+
         return pdf
-
-
+"""
 class EnhancedNumericalPredictionModel(nn.Module):
     def __init__(self, num_components=3):
         super(EnhancedNumericalPredictionModel, self).__init__()
@@ -39,46 +74,6 @@ class EnhancedNumericalPredictionModel(nn.Module):
         sequence_output = outputs.pooler_output
         pdf = self.output_layer(sequence_output)
         return pdf
-
-
-def load_model(model_path):
-    model = EnhancedNumericalPredictionModel()
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    model.eval()  # Set the model to evaluation mode
-    return model
-
-
-def predict(text, model, tokenizer):
-    inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True, padding="max_length",
-                       add_special_tokens=True)
-    input_ids = inputs['input_ids']
-    attention_mask = inputs['attention_mask']
-
-    with torch.no_grad():
-        pdf = model(input_ids=input_ids, attention_mask=attention_mask)
-
-    # Assuming we can access the means and weights of the Gaussian Mixture directly
-    # This part of the code might need to be adjusted based on the actual model architecture and output
-    means = model.output_layer.means.detach().cpu().numpy()
-    weights = torch.softmax(model.output_layer.weights, dim=0).detach().cpu().numpy()
-
-    # Calculate the weighted average of the means
-    weighted_average = np.dot(weights, means)
-
-    # For simplicity, let's take the mean of the weighted averages across all dimensions
-    predicted_value = np.mean(weighted_average)
-
-    return predicted_value
-
-# Load the tokenizer and model
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model_path = "enhanced_numerical_prediction_model.pth"  # Update this path as needed
-model = load_model(model_path)
-
-# Example prediction
-text = "What's next?"
-predicted_value = predict(text, model, tokenizer)
-print(f"Predicted value: {predicted_value}")
 
 """
 class DirectNumericalPredictionModel(nn.Module):
@@ -94,25 +89,88 @@ class DirectNumericalPredictionModel(nn.Module):
         predicted_value = self.regressor(sequence_output)
         return predicted_value
 
-def predict(text, model, tokenizer):
-    inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True, padding="max_length",
-                       add_special_tokens=True)
-    input_ids = inputs['input_ids']
-    attention_mask = inputs['attention_mask']
-
-    with torch.no_grad():
-        predicted_value = model(input_ids=input_ids, attention_mask=attention_mask).squeeze().item()
-
-    return predicted_value
-
-
-# Example prediction usage
+# Training Preparation
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model_path = "path_to_your_trained_model.pth"  # Ensure this path points to your trained model
-model = DirectNumericalPredictionModel()
-model.load_state_dict(torch.load(model_path))
-model.eval()
+df = pd.read_csv('dataset/torchtest.csv')
+sentences = df['text'].tolist()
+numerical_values = df['number'].astype(float).tolist()
+dataset = NumericalPredictionDataset(sentences, numerical_values, tokenizer)
+dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
+# Initialize the model, optimizer, etc. as before
+"""
+model = EnhancedNumericalPredictionModel()
+model.train()
 
-text = "Example text input for prediction."
-predicted_value = predict(text, model, tokenizer)
-print(f"Predicted value: {predicted_value}")
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+
+epochs = 10
+loss_values = []  # Initialize an empty list to store the loss values
+
+for epoch in range(epochs):
+    total_loss = 0
+    for input_ids, attention_mask, targets in dataloader:
+        optimizer.zero_grad()
+        pdf = model(input_ids=input_ids, attention_mask=attention_mask)
+        loss = -torch.log(pdf).mean()  # NLL loss
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    avg_loss = total_loss / len(dataloader)
+    loss_values.append(avg_loss)  # Store the average loss for this epoch
+    print(f"Epoch {epoch+1}, Loss: {avg_loss}")
+
+"""
+# 1. Check for CUDA Availability
+if torch.cuda.is_available():
+    device = "cuda"
+    print("CUDA Available")
+else:
+    device = "cpu"
+    print("CUDA NOT Available")
+
+# Initialize the model
+model = DirectNumericalPredictionModel()  # or EnhancedNumericalPredictionModel()
+
+# 2. Move the Model to GPU
+model.to(device)
+
+# Initialize the optimizer, loss function, etc.
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+loss_function = nn.MSELoss()
+
+# Start the training loop
+epochs = 10  # Adjust epochs according to your need
+loss_values = []
+
+for epoch in range(epochs):
+    total_loss = 0
+    for input_ids, attention_mask, targets in dataloader:
+        # 3. Move Data to GPU
+        input_ids = input_ids.to(device)
+        attention_mask = attention_mask.to(device)
+        targets = targets.to(device)
+
+        optimizer.zero_grad()
+        predictions = model(input_ids=input_ids, attention_mask=attention_mask).squeeze()
+        loss = loss_function(predictions, targets)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    avg_loss = total_loss / len(dataloader)
+    loss_values.append(avg_loss)
+    print(f"Epoch {epoch + 1}, Loss: {avg_loss}")
+
+# Save the model's state dictionary
+model_save_path = "enhanced_numerical_prediction_model.pth"
+torch.save(model.state_dict(), model_save_path)
+
+print(f"Model saved to {model_save_path}")
+
+# Plot Training Loss
+plt.plot(range(1, epochs+1), loss_values, marker='o', label='Training Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training Loss Over Epochs')
+plt.legend()
+plt.show()
